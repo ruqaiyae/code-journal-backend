@@ -7,27 +7,6 @@ export type Entry = {
   photoUrl: string;
 };
 
-// type Data = {
-//   entries: Entry[];
-//   nextEntryId: number;
-// };
-
-// const dataKey = 'code-journal-data';
-
-// function readData(): Data {
-//   let data: Data;
-//   const localData = localStorage.getItem(dataKey);
-//   if (localData) {
-//     data = JSON.parse(localData) as Data;
-//   } else {
-//     data = {
-//       entries: [],
-//       nextEntryId: 1,
-//     };
-//   }
-//   return data;
-// }
-
 const authKey = 'um.auth';
 type Auth = {
   user: User;
@@ -41,8 +20,27 @@ export function removeAuth(): void {
   localStorage.removeItem(authKey);
 }
 
+export function readUser(): User | undefined {
+  const auth = localStorage.getItem(authKey);
+  if (!auth) return undefined;
+  return (JSON.parse(auth) as Auth).user;
+}
+
+export function readToken(): string | undefined {
+  const auth = localStorage.getItem(authKey);
+  if (!auth) return undefined;
+  return (JSON.parse(auth) as Auth).token;
+}
 export async function readEntries(): Promise<Entry[]> {
-  const response = await fetch('/api/entry-list');
+  const bear = readToken();
+  const req = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${bear}`,
+    },
+  };
+  const response = await fetch('/api/entry-list', req);
   if (!response.ok) {
     throw new Error(`response status: ${response.status}`);
   }
@@ -51,7 +49,15 @@ export async function readEntries(): Promise<Entry[]> {
 }
 
 export async function readEntry(entryId: number): Promise<Entry | undefined> {
-  const response = await fetch(`/api/details/${entryId}`);
+  const bear = readToken();
+  const req = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${bear}`,
+    },
+  };
+  const response = await fetch(`/api/details/${entryId}`, req);
   if (!response.ok) {
     throw new Error(`response status: ${response.status}`);
   }
@@ -59,10 +65,12 @@ export async function readEntry(entryId: number): Promise<Entry | undefined> {
 }
 
 export async function addEntry(entry: Entry): Promise<Entry> {
+  const bear = readToken();
   const req = {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${bear}`,
     },
     body: JSON.stringify(entry),
   };
@@ -72,10 +80,12 @@ export async function addEntry(entry: Entry): Promise<Entry> {
 }
 
 export async function updateEntry(entry: Entry): Promise<Entry> {
+  const bear = readToken();
   const req = {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${bear}`,
     },
     body: JSON.stringify(entry),
   };
@@ -85,8 +95,12 @@ export async function updateEntry(entry: Entry): Promise<Entry> {
 }
 
 export async function removeEntry(entryId: number): Promise<void> {
+  const bear = readToken();
   const req = {
     method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${bear}`,
+    },
   };
   const response = await fetch(`/api/details/${entryId}`, req);
   if (!response.ok) {

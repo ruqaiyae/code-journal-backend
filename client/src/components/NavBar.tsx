@@ -23,14 +23,14 @@ export function NavBar() {
                       <div className="relative flex-grow flex-1 px-4">
                         <button
                           className="inline-block align-middle text-center border rounded py-1 px-3 bg-blue-600 text-white"
-                          onClick={() => navigate('sign-up')}>
+                          onClick={() => navigate('auth/sign-up')}>
                           Sign Up
                         </button>
                       </div>
                       <div className="relative flex-grow flex-1 px-4">
                         <button
                           className="inline-block align-middle text-center border rounded py-1 px-3 bg-blue-600 text-white"
-                          onClick={() => navigate('sign-in')}>
+                          onClick={() => navigate('auth/sign-in')}>
                           Sign In
                         </button>
                       </div>

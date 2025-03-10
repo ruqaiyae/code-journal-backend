@@ -2,8 +2,24 @@
 import 'dotenv/config';
 import pg from 'pg';
 import express, { application } from 'express';
-import { ClientError, errorMiddleware } from './lib/index.js';
+import { authMiddleware, ClientError, errorMiddleware } from './lib/index.js';
 import { type Entry } from '../client/src/data.js';
+import jwt, { TokenExpiredError } from 'jsonwebtoken';
+import { verify } from 'crypto';
+import argon2, { hash } from 'argon2';
+
+type User = {
+  userId: number;
+  username: string;
+  hashedPassword: string;
+};
+type Auth = {
+  username: string;
+  password: string;
+};
+
+const hashKey = process.env.TOKEN_SECRET;
+if (!hashKey) throw new Error('TOKEN_SECRET not found in .env');
 
 const db = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -16,7 +32,63 @@ const app = express();
 
 app.use(express.json());
 
-app.get('/api/entry-list', async (req, res, next) => {
+app.post('/api/auth/sign-up', async (req, res, next) => {
+  console.log('got here');
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      throw new ClientError(400, 'username and password are required fields');
+    }
+    const hashedPassword = await argon2.hash(password);
+    const sql = `
+     insert into "users"("username","hashedPassword")
+     values ($1, $2)
+     returning "userId","username","createdAt"`;
+    const params = [username, hashedPassword];
+    const result = await db.query(sql, params);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/auth/sign-in', async (req, res, next) => {
+  try {
+    const { username, password } = req.body as Partial<Auth>;
+    if (!username || !password) {
+      throw new ClientError(401, 'invalid login');
+    }
+
+    const sql = `
+      select "userId", "hashedPassword"
+      from "users"
+      where "username" = $1
+      `;
+    const params = [username];
+    const result = await db.query(sql, params);
+    const user = result.rows[0];
+    if (!user) throw new ClientError(401, 'invalid login information.');
+
+    const passwordValid = await argon2.verify(user.hashedPassword, password);
+
+    if (!passwordValid) throw new ClientError(401, 'invalid login error');
+    if (passwordValid) {
+      const payload = {
+        userId: user.userId,
+        username: user.username,
+      };
+      const token = jwt.sign(payload, hashKey);
+      res.status(200).json({
+        user: payload,
+        token,
+      });
+    }
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/entry-list', authMiddleware, async (req, res, next) => {
   try {
     const sql = `select * from "entries";`;
     const result = await db.query<Entry>(sql); // as Entry
@@ -30,7 +102,7 @@ app.get('/api/entry-list', async (req, res, next) => {
   }
 });
 
-app.get('/api/details/:entryId', async (req, res, next) => {
+app.get('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { entryId } = req.params;
     if (!entryId) throw new ClientError(400, 'please provide entryId.');
@@ -47,7 +119,7 @@ app.get('/api/details/:entryId', async (req, res, next) => {
   }
 });
 
-app.post('/api/entry', async (req, res, next) => {
+app.post('/api/entry', authMiddleware, async (req, res, next) => {
   try {
     const { title, notes, photoUrl } = req.body;
     if (!title) throw new ClientError(400, 'please provide title.');
@@ -69,7 +141,7 @@ app.post('/api/entry', async (req, res, next) => {
   }
 });
 
-app.put('/api/details/:entryId', async (req, res, next) => {
+app.put('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { title, notes, photoUrl } = req.body;
     const { entryId } = req.params;
@@ -93,7 +165,7 @@ app.put('/api/details/:entryId', async (req, res, next) => {
   }
 });
 
-app.delete('/api/details/:entryId', async (req, res, next) => {
+app.delete('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { entryId } = req.params;
     if (!entryId) throw new ClientError(400, 'please provide entryId.');

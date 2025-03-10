@@ -16,16 +16,20 @@ export function RegistrationForm() {
       setIsLoading(true);
       const formData = new FormData(event.currentTarget);
       const userData = Object.fromEntries(formData);
+
       const req = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       };
+
       const res = await fetch('/api/auth/sign-up', req);
+
       if (!res.ok) {
         throw new Error(`fetch Error ${res.status}`);
       }
       const user = (await res.json()) as User;
+
       console.log('Registered', user);
       console.log(
         `You can check the database with: psql -d userManagement -c 'select * from users'`

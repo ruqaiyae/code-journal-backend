@@ -23,6 +23,7 @@ export function SignInForm() {
       const req = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+
         body: JSON.stringify(userData),
       };
       const res = await fetch('/api/auth/sign-in', req);
