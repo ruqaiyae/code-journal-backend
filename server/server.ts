@@ -18,9 +18,26 @@ app.use(express.json());
 
 app.get('/api/entry-list', async (req, res, next) => {
   try {
-    const sql = `select "title", "notes", "photoUrl" from "entries";`;
+    const sql = `select * from "entries";`;
     const result = await db.query<Entry>(sql); // as Entry
     const entry = result.rows;
+    if (!entry) {
+      throw new ClientError(404, 'No entries are available');
+    }
+    res.json(entry);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/details/:entryId', async (req, res, next) => {
+  try {
+    const { entryId } = req.params;
+    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    const sql = `select * from "entries"
+                where "entryId" = $1;`;
+    const result = await db.query<Entry>(sql, [entryId]); // as Entry
+    const entry = result.rows[0];
     if (!entry) {
       throw new ClientError(404, 'No entries are available');
     }
@@ -52,7 +69,7 @@ app.post('/api/entry', async (req, res, next) => {
   }
 });
 
-app.put('/api/entry/:entryId', async (req, res, next) => {
+app.put('/api/details/:entryId', async (req, res, next) => {
   try {
     const { title, notes, photoUrl } = req.body;
     const { entryId } = req.params;
@@ -61,11 +78,29 @@ app.put('/api/entry/:entryId', async (req, res, next) => {
     if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
     if (!entryId) throw new ClientError(400, 'please provide entryId.');
     const sql = `update "entries"
-    set "title" = $1 , "notes" = $2, "photoUrl" = $3
+    set "title" = $1, "notes" = $2, "photoUrl" = $3
     where "entryId" = $4
     returning * ;`;
-    const params = [title, notes, photoUrl];
+    const params = [title, notes, photoUrl, entryId];
     const result = await db.query<Entry>(sql, params); // as Entry
+    const entry = result.rows[0];
+    if (!entry) {
+      throw new ClientError(404, 'No entries are available');
+    }
+    res.json(entry);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/details/:entryId', async (req, res, next) => {
+  try {
+    const { entryId } = req.params;
+    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    const sql = `delete from "entries"
+    where "entryId" = $1
+    returning * ;`;
+    const result = await db.query<Entry>(sql, [entryId]);
     console.log(result);
     const entry = result.rows[0];
     if (!entry) {
@@ -76,6 +111,8 @@ app.put('/api/entry/:entryId', async (req, res, next) => {
     next(error);
   }
 });
+
+app.use(errorMiddleware);
 
 app.listen(process.env.PORT, () => {
   console.log(`express server listening on port ${process.env.PORT}`);
