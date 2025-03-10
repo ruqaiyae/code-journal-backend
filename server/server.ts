@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars -- Remove me */
 import 'dotenv/config';
 import pg from 'pg';
-import express from 'express';
+import express, { application } from 'express';
 import { ClientError, errorMiddleware } from './lib/index.js';
 import { type Entry } from '../client/src/data.js';
 
@@ -14,11 +14,60 @@ const db = new pg.Pool({
 
 const app = express();
 
+app.use(express.json());
+
 app.get('/api/entry-list', async (req, res, next) => {
   try {
     const sql = `select "title", "notes", "photoUrl" from "entries";`;
     const result = await db.query<Entry>(sql); // as Entry
     const entry = result.rows;
+    if (!entry) {
+      throw new ClientError(404, 'No entries are available');
+    }
+    res.json(entry);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/entry', async (req, res, next) => {
+  try {
+    const { title, notes, photoUrl } = req.body;
+    if (!title) throw new ClientError(400, 'please provide title.');
+    if (!notes) throw new ClientError(400, 'please provide notes.');
+    if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
+    const sql = `insert into "entries" ("title", "notes", "photoUrl")
+      values ($1,$2,$3)
+      returning * `;
+    const params = [title, notes, photoUrl];
+    const result = await db.query<Entry>(sql, params); // as Entry
+    console.log(result);
+    const entry = result.rows[0];
+    if (!entry) {
+      throw new ClientError(404, 'No entries are available');
+    }
+    res.json(entry);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.put('/api/entry/:entryId', async (req, res, next) => {
+  try {
+    const { title, notes, photoUrl } = req.body;
+    const { entryId } = req.params;
+    if (!title) throw new ClientError(400, 'please provide title.');
+    if (!notes) throw new ClientError(400, 'please provide notes.');
+    if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
+    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    const sql = `update "entries"
+    set "title" = $1 , "notes" = $2, "photoUrl" = $3
+    where "entryId" = $4
+    returning * ;`;
+    const params = [title, notes, photoUrl];
+    const result = await db.query<Entry>(sql, params); // as Entry
+    console.log(result);
+    const entry = result.rows[0];
     if (!entry) {
       throw new ClientError(404, 'No entries are available');
     }

@@ -45,14 +45,16 @@ export async function readEntry(entryId: number): Promise<Entry | undefined> {
 }
 
 export async function addEntry(entry: Entry): Promise<Entry> {
-  const data = readData();
-  const newEntry = {
-    ...entry,
-    entryId: data.nextEntryId++,
+  const req = {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(entry),
   };
-  data.entries.unshift(newEntry);
-  writeData(data);
-  return newEntry;
+  const res = await fetch('/api/entry', req);
+  if (!res.ok) throw new Error(`fetch Error ${res.status}`);
+  return (await res.json()) as Entry;
 }
 
 export async function updateEntry(entry: Entry): Promise<Entry> {
