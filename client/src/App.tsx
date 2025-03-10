@@ -17,6 +17,7 @@ export default function App() {
           <Route path="auth/sign-in" element={<SignInForm />} />
           <Route path="auth/sign-up" element={<RegistrationForm />} />
           <Route path="details/:entryId" element={<EntryForm />} />
+          <Route path="form" element={<EntryForm />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

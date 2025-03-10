@@ -1,6 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { useUser } from '../pages/useUser';
-import { EntryList } from '../pages/EntryList';
 
 export function NavBar() {
   const { user, handleSignOut } = useUser();
@@ -12,7 +11,9 @@ export function NavBar() {
         <div className="container">
           <div className="row">
             <div className="column-full d-flex align-center">
-              <h1 className="white-text">Code Journal</h1>
+              <Link to="form">
+                <h1 className="white-text">Code Journal</h1>
+              </Link>
               <Link to="/" className="entries-link white-text">
                 <h3>Entries</h3>
               </Link>
@@ -42,7 +43,7 @@ export function NavBar() {
                         className="inline-block align-middle text-center border rounded py-1 px-3 bg-blue-600 text-white"
                         onClick={() => {
                           handleSignOut();
-                          navigate('/');
+                          navigate('auth/sign-in');
                         }}>
                         Sign Out
                       </button>
@@ -55,7 +56,6 @@ export function NavBar() {
                   </p>
                 )}
                 {!user && <p>Not signed in</p>}
-                {user && <EntryList />}
               </div>
             </div>
           </div>

@@ -90,8 +90,10 @@ app.post('/api/auth/sign-in', async (req, res, next) => {
 
 app.get('/api/entry-list', authMiddleware, async (req, res, next) => {
   try {
-    const sql = `select * from "entries";`;
-    const result = await db.query<Entry>(sql); // as Entry
+    const sql = `select *
+                from "entries"
+                where "userId" = $1;`;
+    const result = await db.query<Entry>(sql, [req.user?.userId]); // as Entry
     const entry = result.rows;
     if (!entry) {
       throw new ClientError(404, 'No entries are available');
@@ -107,8 +109,8 @@ app.get('/api/details/:entryId', authMiddleware, async (req, res, next) => {
     const { entryId } = req.params;
     if (!entryId) throw new ClientError(400, 'please provide entryId.');
     const sql = `select * from "entries"
-                where "entryId" = $1;`;
-    const result = await db.query<Entry>(sql, [entryId]); // as Entry
+                where "entryId" = $1 and "userId" = $2;`;
+    const result = await db.query<Entry>(sql, [entryId, req.user?.userId]); // as Entry
     const entry = result.rows[0];
     if (!entry) {
       throw new ClientError(404, 'No entries are available');
@@ -125,10 +127,10 @@ app.post('/api/entry', authMiddleware, async (req, res, next) => {
     if (!title) throw new ClientError(400, 'please provide title.');
     if (!notes) throw new ClientError(400, 'please provide notes.');
     if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
-    const sql = `insert into "entries" ("title", "notes", "photoUrl")
-      values ($1,$2,$3)
+    const sql = `insert into "entries" ("title", "notes", "photoUrl", "userId")
+      values ($1,$2,$3, $4)
       returning * `;
-    const params = [title, notes, photoUrl];
+    const params = [title, notes, photoUrl, req.user?.userId];
     const result = await db.query<Entry>(sql, params); // as Entry
     console.log(result);
     const entry = result.rows[0];
@@ -151,9 +153,9 @@ app.put('/api/details/:entryId', authMiddleware, async (req, res, next) => {
     if (!entryId) throw new ClientError(400, 'please provide entryId.');
     const sql = `update "entries"
     set "title" = $1, "notes" = $2, "photoUrl" = $3
-    where "entryId" = $4
+    where "entryId" = $4 and "userId" = $5
     returning * ;`;
-    const params = [title, notes, photoUrl, entryId];
+    const params = [title, notes, photoUrl, entryId, req.user?.userId];
     const result = await db.query<Entry>(sql, params); // as Entry
     const entry = result.rows[0];
     if (!entry) {
@@ -170,9 +172,9 @@ app.delete('/api/details/:entryId', authMiddleware, async (req, res, next) => {
     const { entryId } = req.params;
     if (!entryId) throw new ClientError(400, 'please provide entryId.');
     const sql = `delete from "entries"
-    where "entryId" = $1
+    where "entryId" = $1 and "userId" = $2
     returning * ;`;
-    const result = await db.query<Entry>(sql, [entryId]);
+    const result = await db.query<Entry>(sql, [entryId, req.user?.userId]);
     console.log(result);
     const entry = result.rows[0];
     if (!entry) {
