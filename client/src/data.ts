@@ -32,7 +32,12 @@ function writeData(data: Data): void {
 }
 
 export async function readEntries(): Promise<Entry[]> {
-  return readData().entries;
+  const response = await fetch('/api/entry-list');
+  if (!response.ok) {
+    throw new Error(`response status: ${response.status}`);
+  }
+
+  return (await response.json()) as Entry[];
 }
 
 export async function readEntry(entryId: number): Promise<Entry | undefined> {
