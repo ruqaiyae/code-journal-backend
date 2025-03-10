@@ -1,3 +1,5 @@
+import { User } from './pages/RegistrationForm';
+
 export type Entry = {
   entryId?: number;
   title: string;
@@ -25,6 +27,19 @@ export type Entry = {
 //   }
 //   return data;
 // }
+
+const authKey = 'um.auth';
+type Auth = {
+  user: User;
+  token: string;
+};
+export function saveAuth(user: User, token: string): void {
+  const auth: Auth = { user, token };
+  localStorage.setItem(authKey, JSON.stringify(auth));
+}
+export function removeAuth(): void {
+  localStorage.removeItem(authKey);
+}
 
 export async function readEntries(): Promise<Entry[]> {
   const response = await fetch('/api/entry-list');
