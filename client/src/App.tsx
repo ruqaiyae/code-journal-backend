@@ -16,6 +16,7 @@ export default function App() {
           <Route index element={<EntryList />} />
           <Route path="auth/sign-in" element={<SignInForm />} />
           <Route path="auth/sign-up" element={<RegistrationForm />} />
+          {/* entry id can be new or 7, 6,... depending on what you click on new button or pencil on certain entry */}
           <Route path="details/:entryId" element={<EntryForm />} />
           <Route path="form" element={<EntryForm />} />
           <Route path="*" element={<NotFound />} />

@@ -29,7 +29,9 @@ export function EntryForm() {
       setIsLoading(true);
       try {
         const entry = await readEntry(id);
-        if (!entry) throw new Error(`Entry with ID ${id} not found`);
+        if (!entry) {
+          throw new Error(`Entry with ID ${id} not found`);
+        }
         setEntry(entry);
         setPhotoUrl(entry.photoUrl);
       } catch (err) {
@@ -38,18 +40,20 @@ export function EntryForm() {
         setIsLoading(false);
       }
     }
-    if (isEditing) load(+entryId);
+    if (isEditing) {
+      load(+entryId);
+    }
   }, [entryId, isEditing]);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
       const formData = new FormData(event.currentTarget);
       const newEntry = Object.fromEntries(formData) as unknown as Entry;
       if (isEditing) {
-        updateEntry({ ...entry, ...newEntry });
+        await updateEntry({ ...entry, ...newEntry });
       } else {
-        addEntry(newEntry);
+        await addEntry(newEntry);
       }
       navigate('/');
     } catch (err) {
@@ -58,10 +62,12 @@ export function EntryForm() {
     }
   }
 
-  function handleDelete() {
-    if (!entry?.entryId) throw new Error('Should never happen');
+  async function handleDelete() {
+    if (!entry?.entryId) {
+      throw new Error('Should never happen');
+    }
     try {
-      removeEntry(entry.entryId);
+      await removeEntry(entry.entryId);
       navigate('/');
     } catch (err) {
       console.error(err);
@@ -69,7 +75,9 @@ export function EntryForm() {
     }
   }
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
   if (error) {
     return (
       <div>

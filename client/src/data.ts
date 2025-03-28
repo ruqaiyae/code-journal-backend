@@ -12,25 +12,32 @@ type Auth = {
   user: User;
   token: string;
 };
+
 export function saveAuth(user: User, token: string): void {
   const auth: Auth = { user, token };
   localStorage.setItem(authKey, JSON.stringify(auth));
 }
+
 export function removeAuth(): void {
   localStorage.removeItem(authKey);
 }
 
 export function readUser(): User | undefined {
   const auth = localStorage.getItem(authKey);
-  if (!auth) return undefined;
+  if (!auth) {
+    return undefined;
+  }
   return (JSON.parse(auth) as Auth).user;
 }
 
 export function readToken(): string | undefined {
   const auth = localStorage.getItem(authKey);
-  if (!auth) return undefined;
+  if (!auth) {
+    return undefined;
+  }
   return (JSON.parse(auth) as Auth).token;
 }
+
 export async function readEntries(): Promise<Entry[]> {
   const bear = readToken();
   const req = {
@@ -75,7 +82,9 @@ export async function addEntry(entry: Entry): Promise<Entry> {
     body: JSON.stringify(entry),
   };
   const res = await fetch('/api/entry', req);
-  if (!res.ok) throw new Error(`fetch Error ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`fetch Error ${res.status}`);
+  }
   return (await res.json()) as Entry;
 }
 
@@ -90,7 +99,9 @@ export async function updateEntry(entry: Entry): Promise<Entry> {
     body: JSON.stringify(entry),
   };
   const res = await fetch(`/api/details/${entry.entryId}`, req);
-  if (!res.ok) throw new Error(`fetch Error ${res.status}`);
+  if (!res.ok) {
+    throw new Error(`fetch Error ${res.status}`);
+  }
   return (await res.json()) as Entry;
 }
 

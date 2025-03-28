@@ -19,7 +19,9 @@ type Auth = {
 };
 
 const hashKey = process.env.TOKEN_SECRET;
-if (!hashKey) throw new Error('TOKEN_SECRET not found in .env');
+if (!hashKey) {
+  throw new Error('TOKEN_SECRET not found in .env');
+}
 
 const db = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -60,18 +62,22 @@ app.post('/api/auth/sign-in', async (req, res, next) => {
     }
 
     const sql = `
-      select "userId", "hashedPassword"
+      select "userId", username, "hashedPassword"
       from "users"
       where "username" = $1
       `;
     const params = [username];
     const result = await db.query(sql, params);
     const user = result.rows[0];
-    if (!user) throw new ClientError(401, 'invalid login information.');
+    if (!user) {
+      throw new ClientError(401, 'invalid login information.');
+    }
 
     const passwordValid = await argon2.verify(user.hashedPassword, password);
 
-    if (!passwordValid) throw new ClientError(401, 'invalid login error');
+    if (!passwordValid) {
+      throw new ClientError(401, 'invalid login error');
+    }
     if (passwordValid) {
       const payload = {
         userId: user.userId,
@@ -88,11 +94,15 @@ app.post('/api/auth/sign-in', async (req, res, next) => {
   }
 });
 
+// this end point to list all the entries for certain user
+// after logging in and navigating to entries, so the end point is missing
+// :userId in its end point ?
 app.get('/api/entry-list', authMiddleware, async (req, res, next) => {
   try {
     const sql = `select *
                 from "entries"
                 where "userId" = $1;`;
+    // [req.user?.userId] instead of of using req.params in /api/entry-list/:userId
     const result = await db.query<Entry>(sql, [req.user?.userId]); // as Entry
     const entry = result.rows;
     if (!entry) {
@@ -104,12 +114,22 @@ app.get('/api/entry-list', authMiddleware, async (req, res, next) => {
   }
 });
 
+// This end point to list the details of certain entry, where we
+// click on certain entry to edit or delete
 app.get('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { entryId } = req.params;
-    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    if (!entryId) {
+      throw new ClientError(400, 'please provide entryId.');
+    }
+    // adding extra where "entryId" = $1 to add more filtering to select
+    // exactly one entry not two.
+    // so when we use only where "userId" = $2;` we get all entries
+    // but adding "entryId" = $1 add extra layer of filtering to get only one entry from
+    // user's entries' list
     const sql = `select * from "entries"
                 where "entryId" = $1 and "userId" = $2;`;
+    // adding req.user?.userId]) because in the endpoint we only put /:entryId
     const result = await db.query<Entry>(sql, [entryId, req.user?.userId]); // as Entry
     const entry = result.rows[0];
     if (!entry) {
@@ -121,12 +141,21 @@ app.get('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   }
 });
 
+// adding to entry table
+// the end point here is /entry, but the sql query is selecting the
+// existing table that is entries
 app.post('/api/entry', authMiddleware, async (req, res, next) => {
   try {
     const { title, notes, photoUrl } = req.body;
-    if (!title) throw new ClientError(400, 'please provide title.');
-    if (!notes) throw new ClientError(400, 'please provide notes.');
-    if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
+    if (!title) {
+      throw new ClientError(400, 'please provide title.');
+    }
+    if (!notes) {
+      throw new ClientError(400, 'please provide notes.');
+    }
+    if (!photoUrl) {
+      throw new ClientError(400, 'please provide photoUrl.');
+    }
     const sql = `insert into "entries" ("title", "notes", "photoUrl", "userId")
       values ($1,$2,$3, $4)
       returning * `;
@@ -147,10 +176,18 @@ app.put('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { title, notes, photoUrl } = req.body;
     const { entryId } = req.params;
-    if (!title) throw new ClientError(400, 'please provide title.');
-    if (!notes) throw new ClientError(400, 'please provide notes.');
-    if (!photoUrl) throw new ClientError(400, 'please provide photoUrl.');
-    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    if (!title) {
+      throw new ClientError(400, 'please provide title.');
+    }
+    if (!notes) {
+      throw new ClientError(400, 'please provide notes.');
+    }
+    if (!photoUrl) {
+      throw new ClientError(400, 'please provide photoUrl.');
+    }
+    if (!entryId) {
+      throw new ClientError(400, 'please provide entryId.');
+    }
     const sql = `update "entries"
     set "title" = $1, "notes" = $2, "photoUrl" = $3
     where "entryId" = $4 and "userId" = $5
@@ -170,10 +207,18 @@ app.put('/api/details/:entryId', authMiddleware, async (req, res, next) => {
 app.delete('/api/details/:entryId', authMiddleware, async (req, res, next) => {
   try {
     const { entryId } = req.params;
-    if (!entryId) throw new ClientError(400, 'please provide entryId.');
+    if (!entryId) {
+      throw new ClientError(400, 'please provide entryId.');
+    }
+    // adding extra where "entryId" = $1 to add more filtering to select
+    // exactly one entry not two.
+    // so when we use only where "userId" = $2;` we get all entries
+    // but adding "entryId" = $1 add extra layer of filtering to get only one entry from
+    // user's entries' list
     const sql = `delete from "entries"
     where "entryId" = $1 and "userId" = $2
     returning * ;`;
+    // adding req.user?.userId]) because in the endpoint we only put /:entryId
     const result = await db.query<Entry>(sql, [entryId, req.user?.userId]);
     console.log(result);
     const entry = result.rows[0];
